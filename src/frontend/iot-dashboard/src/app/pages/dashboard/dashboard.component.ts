@@ -2,14 +2,14 @@ import { Component, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { SignalRService, TelemetryData } from '../../core/services/signalr.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, RouterLink],
+  imports: [CommonModule, FormsModule, TranslateModule],
   template: `
     <div class="space-y-5 animate-fade-in">
       <!-- Header -->
@@ -138,7 +138,7 @@ import { SignalRService, TelemetryData } from '../../core/services/signalr.servi
             </thead>
             <tbody class="divide-y divide-vpb-grey-100">
               @for (item of filteredTelemetry; track item.gatewayId) {
-                <tr class="hover:bg-vpb-green-50/40 transition-colors duration-150">
+                <tr class="hover:bg-vpb-green-50/40 transition-colors duration-150 cursor-pointer" (click)="goToDevice(item.gatewayId)">
                   <td class="px-4 py-2.5">
                     <span class="font-mono text-xs font-semibold text-vpb-dark-700">{{ item.gatewayId }}</span>
                   </td>
@@ -273,11 +273,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   searchTerm = '';
   lastUpdate = '';
   activeFilter: 'all' | 'online' | 'offline' | 'alarm' = 'all';
+  private gwToDeviceId = new Map<string, number>();
   private refreshInterval: any;
 
   constructor(
     private api: ApiService,
-    private signalR: SignalRService
+    private signalR: SignalRService,
+    private router: Router
   ) {
     effect(() => {
       const latest = this.signalR.latestTelemetry();
@@ -306,9 +308,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   refreshAll() {
+    this.loadDeviceMapping();
     this.loadDashboard();
     this.loadLiveTelemetry();
     this.loadActiveAlarms();
+  }
+
+  loadDeviceMapping() {
+    this.api.getDevices().subscribe(devices => {
+      this.gwToDeviceId.clear();
+      for (const d of devices) {
+        this.gwToDeviceId.set(d.gatewayIdentify, d.id);
+      }
+    });
   }
 
   loadDashboard() {
@@ -373,6 +385,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.telemetryList = [entry, ...this.telemetryList];
     }
     this.filterTelemetry();
+  }
+
+  goToDevice(gatewayId: string) {
+    const deviceId = this.gwToDeviceId.get(gatewayId);
+    if (deviceId) {
+      this.router.navigate(['/devices', deviceId]);
+    }
   }
 
   formatTimestamp(ts: number): string {
