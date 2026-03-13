@@ -482,7 +482,15 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
     this.api.exportData({ deviceId: this.deviceId, from: this.exportFrom, to: this.exportTo })
       .subscribe({
         next: data => {
-          this.queryResults = data || [];
+          // Normalize PascalCase (Dapper) → camelCase for template
+          this.queryResults = (data || []).map((r: any) => ({
+            temperature: r.Temperature ?? r.temperature,
+            humidity: r.Humidity ?? r.humidity,
+            createdAt: r.CreatedAt ?? r.createdAt,
+            deviceName: r.DeviceName ?? r.deviceName,
+            gatewayIdentify: r.GatewayIdentify ?? r.gatewayIdentify,
+            quality: r.Quality ?? r.quality
+          }));
           this.queryLoading = false;
           this.queryView = 'table';
         },
