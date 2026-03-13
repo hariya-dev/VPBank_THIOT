@@ -138,7 +138,7 @@ import { SignalRService, TelemetryData } from '../../core/services/signalr.servi
             </thead>
             <tbody class="divide-y divide-vpb-grey-100">
               @for (item of filteredTelemetry; track item.gatewayId) {
-                <tr class="hover:bg-vpb-green-50/40 transition-colors duration-150 cursor-pointer" [routerLink]="['/devices', item.deviceId]">
+                <tr class="hover:bg-vpb-green-50/40 transition-colors duration-150">
                   <td class="px-4 py-2.5">
                     <span class="font-mono text-xs font-semibold text-vpb-dark-700">{{ item.gatewayId }}</span>
                   </td>
@@ -267,6 +267,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   offlineCount = 0;
   onlinePercent = 0;
   activeAlarms = 0;
+  alarmGatewayIds: Set<string> = new Set();
   telemetryList: any[] = [];
   filteredTelemetry: any[] = [];
   searchTerm = '';
@@ -330,6 +331,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadActiveAlarms() {
     this.api.getActiveAlarms().subscribe(data => {
       this.activeAlarms = data.length;
+      this.alarmGatewayIds = new Set(data.map((a: any) => a.device?.gatewayIdentify || a.gatewayId || '').filter((id: string) => id));
+      // If alarm filter is active, re-filter
+      if (this.activeFilter === 'alarm') this.filterTelemetry();
     });
   }
 
@@ -342,7 +346,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } else if (this.activeFilter === 'offline') {
       list = list.filter(t => !t.isOnline);
     } else if (this.activeFilter === 'alarm') {
-      list = list.filter(t => t.temperature > 35 || t.temperature < 10 || t.humidity > 80 || t.humidity < 30);
+      list = list.filter(t => this.alarmGatewayIds.has(t.gatewayId));
     }
 
     // Apply search
