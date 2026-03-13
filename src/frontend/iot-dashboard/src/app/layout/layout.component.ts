@@ -11,19 +11,19 @@ import { filter } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, TranslateModule],
   template: `
-    <div class="flex h-screen overflow-hidden bg-vpb-grey-100">
+    <div class="min-h-screen bg-vpb-grey-100">
       <!-- Mobile Overlay -->
       @if (sidebarOpen) {
         <div class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 md:hidden animate-fade-in"
              (click)="sidebarOpen = false"></div>
       }
 
-      <!-- Sidebar — White with green accents, like VPBank.com.vn -->
-      <aside class="fixed md:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-vpb-grey-200 flex flex-col shrink-0 transition-transform duration-300 md:translate-x-0 shadow-sm"
+      <!-- Sidebar — ALWAYS fixed, never scrolls with content -->
+      <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-vpb-grey-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-sm"
              [class.-translate-x-full]="!sidebarOpen"
              [class.translate-x-0]="sidebarOpen">
         <!-- Logo -->
-        <div class="p-5 border-b border-vpb-grey-200">
+        <div class="p-5 border-b border-vpb-grey-200 shrink-0">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-vpb-green-500 rounded-xl flex items-center justify-center shadow-sm">
               <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -67,7 +67,7 @@ import { filter } from 'rxjs';
         </nav>
 
         <!-- User section -->
-        <div class="p-3 border-t border-vpb-grey-200">
+        <div class="p-3 border-t border-vpb-grey-200 shrink-0">
           <div class="flex items-center gap-3 px-3 py-2">
             <div class="w-8 h-8 bg-vpb-green-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
               {{ auth.currentUser()?.fullName?.charAt(0) || 'U' }}
@@ -83,10 +83,10 @@ import { filter } from 'rxjs';
         </div>
       </aside>
 
-      <!-- Main Content -->
-      <main class="flex-1 flex flex-col overflow-hidden">
-        <!-- Top Bar — White with subtle border, like VPBank header -->
-        <header class="h-14 bg-white border-b border-vpb-grey-200 flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm">
+      <!-- Main Content (offset by sidebar width on desktop) -->
+      <div class="md:ml-64 min-h-screen flex flex-col">
+        <!-- Top Bar — sticky so it stays on top when scrolling -->
+        <header class="sticky top-0 z-30 h-14 bg-white border-b border-vpb-grey-200 flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm">
           <div class="flex items-center gap-3">
             <!-- Hamburger (mobile) -->
             <button (click)="sidebarOpen = !sidebarOpen" class="md:hidden text-vpb-grey-600 hover:text-vpb-dark-700 p-1">
@@ -116,11 +116,11 @@ import { filter } from 'rxjs';
           </div>
         </header>
 
-        <!-- Page Content -->
-        <div class="flex-1 overflow-auto p-4 md:p-6">
+        <!-- Page Content — scrollable area -->
+        <main class="flex-1 p-4 md:p-6">
           <router-outlet />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   `
 })
