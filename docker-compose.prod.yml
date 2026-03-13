@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # ── ASP.NET API ──────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: src/IotMonitoring.WebApi/Dockerfile
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=113.161.76.105,1434;Database=IotMonitoring;User Id=sa;Password=ATPro1234560!@#;TrustServerCertificate=true;
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false
+      - Jwt__Secret=${JWT_SECRET:-YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$}
+      - Mqtt__Server=113.161.76.105
+      - Mqtt__Port=1883
+      - Mqtt__Username=admin
+      - Mqtt__Password=public
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+    networks:
+      - iot-network
+
+  # ── Angular Frontend (Nginx) ────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: src/frontend/iot-dashboard/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${DASHBOARD_PORT:-80}:80"
+    depends_on:
+      - api
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+    networks:
+      - iot-network
+
+  # ── Redis ───────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+      --hz 100
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '0.5'
+    networks:
+      - iot-network
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  iot-network:
+    driver: bridge

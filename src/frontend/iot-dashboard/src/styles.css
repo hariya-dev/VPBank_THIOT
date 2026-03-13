@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ─────────── VPBank IoT Design System — Light Theme ─────────── */
+/* Matches https://www.vpbank.com.vn brand identity                */
+
+@layer base {
+  body {
+    @apply font-['Inter',sans-serif] bg-vpb-grey-100 text-vpb-dark-700 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  ::selection { @apply bg-vpb-green-100 text-vpb-green-900; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-vpb-grey-100; }
+  ::-webkit-scrollbar-thumb { @apply bg-vpb-grey-400 rounded-full hover:bg-vpb-grey-500; }
+}
+
+@layer components {
+  /* ── Cards ── */
+  .card {
+    @apply bg-white rounded-xl border border-vpb-grey-200 p-5 shadow-sm
+    transition-all duration-200 hover:shadow-md;
+  }
+  .card-flat {
+    @apply bg-vpb-grey-50 rounded-xl border border-vpb-grey-200 p-5;
+  }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    @apply bg-vpb-green-500 text-white px-5 py-2.5 rounded-lg font-semibold text-sm
+    hover:bg-vpb-green-600 active:bg-vpb-green-700
+    transition-all duration-200 shadow-sm hover:shadow-md
+    focus:outline-none focus:ring-2 focus:ring-vpb-green-300 focus:ring-offset-2;
+  }
+  .btn-secondary {
+    @apply bg-white text-vpb-dark-700 px-5 py-2.5 rounded-lg font-medium text-sm
+    border border-vpb-grey-300 hover:border-vpb-green-400 hover:text-vpb-green-600
+    transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vpb-green-200;
+  }
+  .btn-ghost {
+    @apply text-vpb-grey-600 px-3 py-2 rounded-lg font-medium text-sm
+    hover:bg-vpb-grey-100 hover:text-vpb-dark-700
+    transition-all duration-200;
+  }
+  .btn-danger {
+    @apply bg-red-50 text-red-600 border border-red-200 px-5 py-2.5 rounded-lg font-medium text-sm
+    hover:bg-red-100 hover:border-red-300
+    transition-all duration-200;
+  }
+
+  /* ── Inputs ── */
+  .input-field {
+    @apply w-full px-4 py-2.5 bg-white border border-vpb-grey-300 rounded-lg
+    text-vpb-dark-700 placeholder-vpb-grey-500 text-sm
+    focus:outline-none focus:ring-2 focus:ring-vpb-green-200 focus:border-vpb-green-400
+    transition-all duration-200;
+  }
+
+  /* ── Badges ── */
+  .badge-online {
+    @apply inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full
+    bg-vpb-green-50 text-vpb-green-700 border border-vpb-green-200;
+  }
+  .badge-offline {
+    @apply inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full
+    bg-red-50 text-red-600 border border-red-200;
+  }
+  .badge-warning {
+    @apply inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full
+    bg-amber-50 text-amber-700 border border-amber-200;
+  }
+  .badge-critical {
+    @apply inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full
+    bg-red-50 text-red-700 border border-red-200;
+  }
+  .badge-info {
+    @apply inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full
+    bg-vpb-green-50 text-vpb-green-600 border border-vpb-green-200;
+  }
+
+  /* ── Tabs ── */
+  .tab-btn {
+    @apply px-4 py-2 rounded-lg text-sm font-medium text-vpb-grey-600
+    hover:text-vpb-green-600 hover:bg-vpb-green-50
+    transition-all duration-200;
+  }
+  .tab-btn.active {
+    @apply bg-vpb-green-500 text-white shadow-sm;
+  }
+
+  /* ── Tables ── */
+  .table-header {
+    @apply px-4 py-3 text-left text-[11px] font-semibold text-vpb-grey-600
+    uppercase tracking-wider;
+  }
+  .table-row {
+    @apply border-b border-vpb-grey-100 hover:bg-vpb-green-50/30
+    transition-colors duration-150;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm text-vpb-dark-600;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium
+    text-vpb-grey-700 hover:bg-vpb-green-50 hover:text-vpb-green-700
+    transition-all duration-200;
+  }
+  .sidebar-link.active {
+    @apply bg-vpb-green-500 text-white shadow-sm;
+  }
+
+  /* ── KPI / Stats Cards ── */
+  .kpi-card {
+    @apply bg-white rounded-xl border border-vpb-grey-200 p-5 shadow-sm;
+  }
+  .kpi-value {
+    @apply text-2xl font-bold text-vpb-dark-700 mt-1;
+  }
+  .kpi-label {
+    @apply text-xs font-medium text-vpb-grey-600 uppercase tracking-wider;
+  }
+  .kpi-icon {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center;
+  }
+
+  /* ── Pulse dots ── */
+  .pulse-dot {
+    @apply w-2 h-2 rounded-full inline-block;
+  }
+  .pulse-dot.online {
+    @apply bg-vpb-green-500;
+    animation: pulse-green 2s ease-in-out infinite;
+  }
+  .pulse-dot.offline {
+    @apply bg-red-400;
+  }
+
+  /* ── Dashboard specific ── */
+  .dashboard-muted { @apply text-vpb-grey-600; }
+  .dashboard-border { @apply border-vpb-grey-200; }
+}
+
+/* ── Animations ── */
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 166, 81, 0.5); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(0, 166, 81, 0); }
+}
+
+/* ── Chart containers ── */
+.chart-container {
+  @apply bg-white rounded-xl border border-vpb-grey-200 p-4;
+}
+
+/* ── Utility ── */
+.text-dashboard-muted { @apply text-vpb-grey-600; }
+.border-dashboard-border { @apply border-vpb-grey-200; }
+.bg-navy-700 { @apply bg-vpb-grey-100; }
+.bg-navy-700\/50 { @apply bg-vpb-grey-50; }
+.bg-navy-700\/30 { @apply bg-vpb-grey-50; }
+
+/* ── Number animation ── */
+.animate-number {
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
