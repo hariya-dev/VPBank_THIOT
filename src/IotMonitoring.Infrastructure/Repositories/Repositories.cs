@@ -103,7 +103,7 @@ public class DeviceSettingRepository : IDeviceSettingRepository
             existing.HumiLow = setting.HumiLow;
             existing.LogCycleSeconds = setting.LogCycleSeconds;
             existing.OfflineTimeout = setting.OfflineTimeout;
-            existing.UpdatedAt = DateTime.UtcNow;
+            existing.UpdatedAt = IotMonitoring.Domain.Common.TimeHelper.VnNow;
         }
         await _db.SaveChangesAsync(ct);
     }
@@ -147,7 +147,7 @@ public class AlarmLogRepository : IAlarmLogRepository
         if (alarm != null)
         {
             alarm.IsAcknowledged = true;
-            alarm.AcknowledgedAt = DateTime.UtcNow;
+            alarm.AcknowledgedAt = IotMonitoring.Domain.Common.TimeHelper.VnNow;
             alarm.AcknowledgedBy = acknowledgedBy;
             await _db.SaveChangesAsync(ct);
         }
@@ -159,7 +159,7 @@ public class AlarmLogRepository : IAlarmLogRepository
         if (alarm != null)
         {
             alarm.IsResolved = true;
-            alarm.ResolvedAt = DateTime.UtcNow;
+            alarm.ResolvedAt = IotMonitoring.Domain.Common.TimeHelper.VnNow;
             alarm.ResolvedBy = resolvedBy;
             await _db.SaveChangesAsync(ct);
         }

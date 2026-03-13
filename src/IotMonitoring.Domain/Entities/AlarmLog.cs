@@ -1,3 +1,4 @@
+using IotMonitoring.Domain.Common;
 using IotMonitoring.Domain.Enums;
 
 namespace IotMonitoring.Domain.Entities;
@@ -17,7 +18,7 @@ public class AlarmLog
     public bool IsResolved { get; set; }
     public DateTime? ResolvedAt { get; set; }
     public string? ResolvedBy { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = TimeHelper.VnNow;
 
     // Navigation
     public Device Device { get; set; } = null!;

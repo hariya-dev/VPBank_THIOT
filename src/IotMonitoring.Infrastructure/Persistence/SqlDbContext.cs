@@ -1,3 +1,4 @@
+using IotMonitoring.Domain.Common;
 using IotMonitoring.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,13 +26,13 @@ public class SqlDbContext : DbContext
         foreach (var entry in ChangeTracker.Entries<Domain.Common.BaseEntity>())
         {
             if (entry.State == EntityState.Modified)
-                entry.Entity.UpdatedAt = DateTime.UtcNow;
+                entry.Entity.UpdatedAt = TimeHelper.VnNow;
         }
 
         foreach (var entry in ChangeTracker.Entries<Domain.Common.BaseEntity<Guid>>())
         {
             if (entry.State == EntityState.Modified)
-                entry.Entity.UpdatedAt = DateTime.UtcNow;
+                entry.Entity.UpdatedAt = TimeHelper.VnNow;
         }
 
         return base.SaveChangesAsync(cancellationToken);

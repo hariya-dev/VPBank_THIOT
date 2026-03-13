@@ -72,7 +72,7 @@ public class BulkLogWorker : BackgroundService
 
     private async Task ProcessBulkLogAsync(CancellationToken ct)
     {
-        var now = DateTime.UtcNow;
+        var now = IotMonitoring.Domain.Common.TimeHelper.VnNow;
         var allTelemetry = await _cache.GetAllTelemetryAsync();
         var batch = new List<DataLog>();
 
