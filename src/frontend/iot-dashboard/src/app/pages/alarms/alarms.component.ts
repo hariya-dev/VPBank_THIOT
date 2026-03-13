@@ -163,19 +163,20 @@ export class AlarmsComponent implements OnInit {
 
   loadActiveAlarms() {
     this.api.getActiveAlarms().subscribe(d => {
-      this.activeAlarms = d;
+      this.activeAlarms = d.map((a: any) => this.normalizeAlarm(a));
       this.applyFilter();
-      this.stats.active = d.filter((a: any) => !a.isAcknowledged).length;
-      this.stats.acknowledged = d.filter((a: any) => a.isAcknowledged && !a.isResolved).length;
+      this.stats.active = this.activeAlarms.filter((a: any) => !a.isAcknowledged).length;
+      this.stats.acknowledged = this.activeAlarms.filter((a: any) => a.isAcknowledged && !a.isResolved).length;
     });
-    // Load resolved count
-    this.api.getAlarms({ page: 1, pageSize: 1 }).subscribe(d => {
+    this.api.getAlarms({ isResolved: true, page: 1, pageSize: 1 }).subscribe(d => {
       this.stats.resolved = d.totalCount || 0;
     });
   }
 
   loadHistory() {
-    this.api.getAlarms({ page: 1, pageSize: 100 }).subscribe(d => this.historyAlarms = d.items || []);
+    this.api.getAlarms({ page: 1, pageSize: 100 }).subscribe(d => {
+      this.historyAlarms = (d.items || []).map((a: any) => this.normalizeAlarm(a));
+    });
   }
 
   applyFilter() {
@@ -198,5 +199,15 @@ export class AlarmsComponent implements OnInit {
       case 'Warning': return 'badge-warning';
       default: return 'badge-info';
     }
+  }
+
+  private normalizeAlarm(a: any): any {
+    const typeMap: Record<number, string> = { 0: 'Nhiệt cao', 1: 'Nhiệt thấp', 2: 'Ẩm cao', 3: 'Ẩm thấp', 4: 'Mất kết nối', 5: 'Khôi phục' };
+    const sevMap: Record<number, string> = { 0: 'Info', 1: 'Warning', 2: 'Critical' };
+    return {
+      ...a,
+      alarmType: typeof a.alarmType === 'number' ? (typeMap[a.alarmType] ?? `Type ${a.alarmType}`) : a.alarmType,
+      severity: typeof a.severity === 'number' ? (sevMap[a.severity] ?? `Sev ${a.severity}`) : a.severity
+    };
   }
 }
