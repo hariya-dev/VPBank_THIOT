@@ -14,7 +14,7 @@ declare var Chart: any;
   standalone: true,
   imports: [CommonModule, FormsModule, TranslateModule, RouterLink],
   template: `
-    <div class="space-y-6 animate-fade-in" *ngIf="device">
+    <div class="space-y-5 animate-fade-in" *ngIf="device">
       <!-- Breadcrumb -->
       <div class="flex items-center gap-2 text-sm">
         <a routerLink="/devices" class="text-dashboard-muted hover:text-primary-400 transition-colors">{{ 'DEVICES.TITLE' | translate }}</a>
@@ -69,11 +69,123 @@ declare var Chart: any;
         </div>
       </div>
 
+      <!-- ═══ DATA QUERY SECTION (above tabs) ═══ -->
+      <div class="card">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+          <h3 class="font-semibold text-sm uppercase tracking-wider text-dashboard-muted flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Tra cứu dữ liệu
+          </h3>
+        </div>
+
+        <!-- Search Controls -->
+        <div class="flex flex-wrap items-end gap-3 mb-4">
+          <div class="flex-1 min-w-[140px]">
+            <label class="text-[10px] text-dashboard-muted mb-1 block uppercase tracking-wider">Từ ngày</label>
+            <input [(ngModel)]="exportFrom" type="datetime-local" class="input-field text-sm w-full" />
+          </div>
+          <div class="flex-1 min-w-[140px]">
+            <label class="text-[10px] text-dashboard-muted mb-1 block uppercase tracking-wider">Đến ngày</label>
+            <input [(ngModel)]="exportTo" type="datetime-local" class="input-field text-sm w-full" />
+          </div>
+          <div class="min-w-[120px]">
+            <label class="text-[10px] text-dashboard-muted mb-1 block uppercase tracking-wider">Loại</label>
+            <select [(ngModel)]="queryType" class="input-field text-sm w-full">
+              <option value="all">Tất cả</option>
+              <option value="temperature">Nhiệt độ</option>
+              <option value="humidity">Độ ẩm</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button (click)="searchData()" class="btn-primary text-sm px-4 py-2 flex items-center gap-1.5" [disabled]="queryLoading">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              {{ queryLoading ? 'Đang tải...' : 'Tìm kiếm' }}
+            </button>
+            @if (queryResults.length > 0) {
+              <button (click)="exportExcel()" class="btn-secondary text-sm px-4 py-2 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Xuất Excel
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Results -->
+        @if (queryResults.length > 0) {
+          <!-- Toggle: Table / Chart -->
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs text-dashboard-muted">{{ queryResults.length }} bản ghi</span>
+            <div class="flex gap-1 bg-navy-700 rounded-lg p-0.5">
+              <button (click)="queryView = 'table'" class="tab-btn text-xs !px-3 !py-1" [class.active]="queryView === 'table'">
+                <svg class="w-3.5 h-3.5 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                Bảng
+              </button>
+              <button (click)="queryView = 'chart'; initQueryChart()" class="tab-btn text-xs !px-3 !py-1" [class.active]="queryView === 'chart'">
+                <svg class="w-3.5 h-3.5 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Biểu đồ
+              </button>
+            </div>
+          </div>
+
+          <!-- Table View -->
+          @if (queryView === 'table') {
+            <div class="overflow-x-auto max-h-80 rounded-lg border border-dashboard-border/30">
+              <table class="w-full">
+                <thead class="bg-navy-700/50 sticky top-0 z-10">
+                  <tr>
+                    <th class="table-header">#</th>
+                    @if (queryType !== 'humidity') {
+                      <th class="table-header">🌡️ Nhiệt độ (°C)</th>
+                    }
+                    @if (queryType !== 'temperature') {
+                      <th class="table-header">💧 Độ ẩm (%)</th>
+                    }
+                    <th class="table-header">Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of queryResults; track $index) {
+                    <tr class="table-row">
+                      <td class="table-cell text-dashboard-muted text-xs">{{ $index + 1 }}</td>
+                      @if (queryType !== 'humidity') {
+                        <td class="table-cell font-semibold tabular-nums" [class.text-accent-400]="row.temperature > 35" [class.text-sky-400]="row.temperature < 10">
+                          {{ row.temperature !== null ? (row.temperature | number:'1.1-1') : '--' }}
+                        </td>
+                      }
+                      @if (queryType !== 'temperature') {
+                        <td class="table-cell font-semibold tabular-nums" [class.text-amber-400]="row.humidity > 80 || row.humidity < 30">
+                          {{ row.humidity !== null ? (row.humidity | number:'1.1-1') : '--' }}
+                        </td>
+                      }
+                      <td class="table-cell text-xs text-dashboard-muted">{{ row.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <!-- Chart View -->
+          @if (queryView === 'chart') {
+            <div class="h-64 md:h-80">
+              <canvas #queryChart></canvas>
+            </div>
+          }
+        }
+
+        @if (querySearched && queryResults.length === 0) {
+          <div class="text-center py-8">
+            <svg class="w-10 h-10 text-dashboard-muted/30 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-sm text-dashboard-muted">Không có dữ liệu trong khoảng thời gian này</p>
+          </div>
+        }
+      </div>
+
       <!-- Tabs -->
       <div class="flex gap-1 bg-navy-700 rounded-lg p-0.5 w-fit">
         <button (click)="setActiveTab('chart')" class="tab-btn text-sm" [class.active]="activeTab === 'chart'">
-          <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-          Biểu đồ
+          <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          Real-time
         </button>
         <button (click)="setActiveTab('info')" class="tab-btn text-sm" [class.active]="activeTab === 'info'">
           <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -92,7 +204,7 @@ declare var Chart: any;
         </button>
       </div>
 
-      <!-- Chart Tab -->
+      <!-- Chart Tab (Real-time) -->
       @if (activeTab === 'chart') {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div class="card">
@@ -116,40 +228,20 @@ declare var Chart: any;
             </div>
           </div>
         </div>
-        <p class="text-xs text-dashboard-muted text-center">Dữ liệu real-time cập nhật tự động qua SignalR (tối đa {{ maxPoints }} điểm)</p>
+        <p class="text-xs text-dashboard-muted text-center">Dữ liệu real-time cập nhật tự động (tối đa {{ maxPoints }} điểm)</p>
       }
 
       <!-- Info Tab -->
       @if (activeTab === 'info') {
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="card">
-            <h3 class="font-semibold mb-4 text-sm uppercase tracking-wider text-dashboard-muted">Thông tin thiết bị</h3>
-            <div class="space-y-3 text-sm">
-              <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">Tên</span><span class="font-medium">{{ device.name }}</span></div>
-              <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">Gateway ID</span><span class="font-mono text-primary-400">{{ device.gatewayIdentify }}</span></div>
-              <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">{{ 'DEVICES.PROVINCE' | translate }}</span><span>{{ device.province?.name || '--' }}</span></div>
-              <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">MQTT Topic</span><span class="font-mono text-xs text-primary-400">{{ device.mqttTopic }}</span></div>
-              <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">Latitude</span><span>{{ device.latitude | number:'1.6-6' }}</span></div>
-              <div class="flex justify-between py-1"><span class="text-dashboard-muted">Longitude</span><span>{{ device.longitude | number:'1.6-6' }}</span></div>
-            </div>
-          </div>
-          <div class="card">
-            <h3 class="font-semibold mb-4 text-sm uppercase tracking-wider text-dashboard-muted">Xuất dữ liệu</h3>
-            <p class="text-sm text-dashboard-muted mb-4">Xuất dữ liệu cảm biến của thiết bị trong khoảng thời gian.</p>
-            <div class="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <label class="text-xs text-dashboard-muted mb-1 block">Từ ngày</label>
-                <input [(ngModel)]="exportFrom" type="datetime-local" class="input-field text-sm" />
-              </div>
-              <div>
-                <label class="text-xs text-dashboard-muted mb-1 block">Đến ngày</label>
-                <input [(ngModel)]="exportTo" type="datetime-local" class="input-field text-sm" />
-              </div>
-            </div>
-            <button (click)="exportCSV()" class="btn-primary w-full text-sm flex items-center justify-center gap-2">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              Xuất báo cáo CSV
-            </button>
+        <div class="card">
+          <h3 class="font-semibold mb-4 text-sm uppercase tracking-wider text-dashboard-muted">Thông tin thiết bị</h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">Tên</span><span class="font-medium">{{ device.name }}</span></div>
+            <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">Gateway ID</span><span class="font-mono text-primary-400">{{ device.gatewayIdentify }}</span></div>
+            <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">{{ 'DEVICES.PROVINCE' | translate }}</span><span>{{ device.province?.name || '--' }}</span></div>
+            <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">MQTT Topic</span><span class="font-mono text-xs text-primary-400">{{ device.mqttTopic }}</span></div>
+            <div class="flex justify-between py-1 border-b border-dashboard-border/30"><span class="text-dashboard-muted">Latitude</span><span>{{ device.latitude | number:'1.6-6' }}</span></div>
+            <div class="flex justify-between py-1"><span class="text-dashboard-muted">Longitude</span><span>{{ device.longitude | number:'1.6-6' }}</span></div>
           </div>
         </div>
       }
@@ -300,6 +392,7 @@ declare var Chart: any;
 export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('tempChart') tempChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('humiChart') humiChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('queryChart') queryChartRef!: ElementRef<HTMLCanvasElement>;
 
   device: any = null;
   liveTemp: number | null = null;
@@ -315,11 +408,18 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   editForm: any = {};
   settingsForm: any = { tempHigh: 35, tempLow: 10, humiHigh: 80, humiLow: 30, logCycleSeconds: 300, offlineTimeout: 120 };
 
+  // Data query
   exportFrom = '';
   exportTo = '';
+  queryType: 'all' | 'temperature' | 'humidity' = 'all';
+  queryResults: any[] = [];
+  queryView: 'table' | 'chart' = 'table';
+  queryLoading = false;
+  querySearched = false;
 
   private tempChart: any;
   private humiChart: any;
+  private queryChartInstance: any;
   private chartLabels: string[] = [];
   private tempData: number[] = [];
   private humiData: number[] = [];
@@ -340,8 +440,8 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
     this.api.getProvinces().subscribe(p => this.provinces = p);
 
     const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    this.exportFrom = weekAgo.toISOString().slice(0, 16);
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    this.exportFrom = dayAgo.toISOString().slice(0, 16);
     this.exportTo = now.toISOString().slice(0, 16);
   }
 
@@ -351,18 +451,17 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy() {
     this.destroyCharts();
+    this.queryChartInstance?.destroy();
     if (this.pollingInterval) clearInterval(this.pollingInterval);
   }
 
   setActiveTab(tab: string) {
     if (tab === this.activeTab) return;
-    // Destroy old charts before switching away
     if (this.activeTab === 'chart') {
       this.destroyCharts();
     }
     this.activeTab = tab;
     if (tab === 'chart') {
-      // Wait for Angular to render the canvas elements
       setTimeout(() => this.initCharts(), 100);
     } else if (tab === 'alarms') {
       this.loadAlarms();
@@ -376,23 +475,124 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
     this.humiChart = null;
   }
 
+  // ── Data Query ──
+  searchData() {
+    this.queryLoading = true;
+    this.querySearched = true;
+    this.api.exportData({ deviceId: this.deviceId, from: this.exportFrom, to: this.exportTo })
+      .subscribe({
+        next: data => {
+          this.queryResults = data || [];
+          this.queryLoading = false;
+          this.queryView = 'table';
+        },
+        error: () => {
+          this.queryResults = [];
+          this.queryLoading = false;
+        }
+      });
+  }
+
+  initQueryChart() {
+    setTimeout(() => {
+      if (!this.queryChartRef || typeof Chart === 'undefined') return;
+      this.queryChartInstance?.destroy();
+
+      const labels = this.queryResults.map(r => {
+        const d = new Date(r.createdAt);
+        return d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      });
+
+      const datasets: any[] = [];
+      if (this.queryType !== 'humidity') {
+        datasets.push({
+          label: 'Nhiệt độ (°C)',
+          data: this.queryResults.map(r => r.temperature),
+          borderColor: '#E31B23',
+          backgroundColor: 'rgba(227,27,35,0.1)',
+          borderWidth: 2, fill: true, tension: 0.4, pointRadius: 1
+        });
+      }
+      if (this.queryType !== 'temperature') {
+        datasets.push({
+          label: 'Độ ẩm (%)',
+          data: this.queryResults.map(r => r.humidity),
+          borderColor: '#00A651',
+          backgroundColor: 'rgba(0,166,81,0.1)',
+          borderWidth: 2, fill: true, tension: 0.4, pointRadius: 1
+        });
+      }
+
+      this.queryChartInstance = new Chart(this.queryChartRef.nativeElement, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, labels: { color: '#7A98BA', font: { size: 11 } } } },
+          scales: {
+            x: { grid: { color: 'rgba(30,58,90,0.3)', drawBorder: false }, ticks: { color: '#7A98BA', font: { size: 9 }, maxTicksLimit: 12 } },
+            y: { grid: { color: 'rgba(30,58,90,0.3)', drawBorder: false }, ticks: { color: '#7A98BA', font: { size: 10 } } },
+          },
+          interaction: { intersect: false, mode: 'index' as const },
+        }
+      });
+    }, 100);
+  }
+
+  exportExcel() {
+    const data = this.queryResults;
+    if (!data || data.length === 0) { alert('Không có dữ liệu để xuất'); return; }
+
+    // Build Excel-compatible XML
+    let rows = '';
+    // Header row
+    const headers = ['#'];
+    if (this.queryType !== 'humidity') headers.push('Nhiệt độ (°C)');
+    if (this.queryType !== 'temperature') headers.push('Độ ẩm (%)');
+    headers.push('Thời gian');
+
+    rows += '<Row>' + headers.map(h => `<Cell><Data ss:Type="String">${h}</Data></Cell>`).join('') + '</Row>';
+
+    // Data rows
+    data.forEach((r: any, i: number) => {
+      let cells = `<Cell><Data ss:Type="Number">${i + 1}</Data></Cell>`;
+      if (this.queryType !== 'humidity') cells += `<Cell><Data ss:Type="Number">${r.temperature ?? ''}</Data></Cell>`;
+      if (this.queryType !== 'temperature') cells += `<Cell><Data ss:Type="Number">${r.humidity ?? ''}</Data></Cell>`;
+      cells += `<Cell><Data ss:Type="String">${new Date(r.createdAt).toLocaleString('vi-VN')}</Data></Cell>`;
+      rows += `<Row>${cells}</Row>`;
+    });
+
+    const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Worksheet ss:Name="${this.device.gatewayIdentify}">
+<Table>${rows}</Table>
+</Worksheet>
+</Workbook>`;
+
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${this.device.gatewayIdentify}_${this.queryType}_${new Date().toISOString().slice(0, 10)}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Device loading ──
   loadDevice() {
     this.api.getDevice(this.deviceId).subscribe(d => {
       this.device = d;
       this.editForm = { ...d };
-      // Load settings
       this.api.getDeviceSettings(this.deviceId).subscribe(s => {
         if (s) this.settingsForm = { ...s };
       });
-      // Load initial live telemetry
       this.api.getDeviceTelemetry(d.gatewayIdentify).subscribe(t => {
         if (t) { this.liveTemp = t.temperature; this.liveHumi = t.humidity; }
       });
-      // Load alarm count
       this.api.getAlarms({ deviceId: this.deviceId, page: 1, pageSize: 1 }).subscribe(r => {
         this.alarmCount = r.totalCount || 0;
       });
-      // Start 1-second Redis polling for real-time chart
       this.startPolling(d.gatewayIdentify);
     });
   }
@@ -408,7 +608,7 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
           this.addChartPoint(t.temperature ?? 0, t.humidity ?? 0);
         }
       });
-    }, 1000); // Poll Redis every 1 second
+    }, 1000);
   }
 
   loadAlarms() {
@@ -433,19 +633,6 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
 
   resolveAlarm(id: number) {
     this.api.resolveAlarm(id).subscribe(() => this.loadAlarms());
-  }
-
-  exportCSV() {
-    this.api.exportData({ deviceId: this.deviceId, from: this.exportFrom, to: this.exportTo })
-      .subscribe(data => {
-        if (!data || data.length === 0) { alert('Không có dữ liệu để xuất'); return; }
-        const csv = [Object.keys(data[0]).join(','), ...data.map((r: any) => Object.values(r).join(','))].join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `${this.device.gatewayIdentify}_report.csv`; a.click();
-        URL.revokeObjectURL(url);
-      });
   }
 
   private addChartPoint(temp: number, humi: number) {
