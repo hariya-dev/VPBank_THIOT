@@ -138,4 +138,13 @@ export class ApiService {
     });
     return this.http.get<any[]>(`${this.API}/datalogs/summary`, { params: httpParams });
   }
+
+  getAlarmReport(params: any): Observable<any> {
+    let httpParams = new HttpParams();
+    Object.keys(params).forEach(key => {
+      if (params[key] !== null && params[key] !== undefined)
+        httpParams = httpParams.set(key, params[key]);
+    });
+    return this.http.get(`${this.API}/datalogs/alarm-report`, { params: httpParams });
+  }
 }
