@@ -71,19 +71,19 @@ declare var Chart: any;
 
       <!-- Tabs -->
       <div class="flex gap-1 bg-navy-700 rounded-lg p-0.5 w-fit">
-        <button (click)="activeTab = 'chart'" class="tab-btn text-sm" [class.active]="activeTab === 'chart'">
+        <button (click)="setActiveTab('chart')" class="tab-btn text-sm" [class.active]="activeTab === 'chart'">
           <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           Biểu đồ
         </button>
-        <button (click)="activeTab = 'info'" class="tab-btn text-sm" [class.active]="activeTab === 'info'">
+        <button (click)="setActiveTab('info')" class="tab-btn text-sm" [class.active]="activeTab === 'info'">
           <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           Thông tin
         </button>
-        <button (click)="activeTab = 'settings'" class="tab-btn text-sm" [class.active]="activeTab === 'settings'">
+        <button (click)="setActiveTab('settings')" class="tab-btn text-sm" [class.active]="activeTab === 'settings'">
           <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           Cài đặt
         </button>
-        <button (click)="activeTab = 'alarms'; loadAlarms()" class="tab-btn text-sm" [class.active]="activeTab === 'alarms'">
+        <button (click)="setActiveTab('alarms')" class="tab-btn text-sm" [class.active]="activeTab === 'alarms'">
           <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
           Cảnh báo
           @if (alarmCount > 0) {
@@ -350,9 +350,30 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy() {
+    this.destroyCharts();
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
+  }
+
+  setActiveTab(tab: string) {
+    if (tab === this.activeTab) return;
+    // Destroy old charts before switching away
+    if (this.activeTab === 'chart') {
+      this.destroyCharts();
+    }
+    this.activeTab = tab;
+    if (tab === 'chart') {
+      // Wait for Angular to render the canvas elements
+      setTimeout(() => this.initCharts(), 100);
+    } else if (tab === 'alarms') {
+      this.loadAlarms();
+    }
+  }
+
+  private destroyCharts() {
     this.tempChart?.destroy();
     this.humiChart?.destroy();
-    if (this.pollingInterval) clearInterval(this.pollingInterval);
+    this.tempChart = null;
+    this.humiChart = null;
   }
 
   loadDevice() {
@@ -459,13 +480,13 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.tempChart = new Chart(this.tempChartRef.nativeElement, {
       type: 'line',
-      data: { labels: [], datasets: [{ label: 'Temperature', data: [], borderColor: '#E31B23', backgroundColor: 'rgba(227,27,35,0.1)', borderWidth: 2, fill: true }] },
+      data: { labels: [...this.chartLabels], datasets: [{ label: 'Temperature', data: [...this.tempData], borderColor: '#E31B23', backgroundColor: 'rgba(227,27,35,0.1)', borderWidth: 2, fill: true }] },
       options: { ...opts, scales: { ...opts.scales, y: { ...opts.scales.y, suggestedMin: 15, suggestedMax: 40 } } }
     });
 
     this.humiChart = new Chart(this.humiChartRef.nativeElement, {
       type: 'line',
-      data: { labels: [], datasets: [{ label: 'Humidity', data: [], borderColor: '#00A651', backgroundColor: 'rgba(0,166,81,0.1)', borderWidth: 2, fill: true }] },
+      data: { labels: [...this.chartLabels], datasets: [{ label: 'Humidity', data: [...this.humiData], borderColor: '#00A651', backgroundColor: 'rgba(0,166,81,0.1)', borderWidth: 2, fill: true }] },
       options: { ...opts, scales: { ...opts.scales, y: { ...opts.scales.y, suggestedMin: 20, suggestedMax: 90 } } }
     });
   }
