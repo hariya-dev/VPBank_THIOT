@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -324,6 +324,7 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   private tempData: number[] = [];
   private humiData: number[] = [];
   private deviceId!: number;
+  private pollingInterval: any = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -331,17 +332,7 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
     private api: ApiService,
     public auth: AuthService,
     private signalR: SignalRService
-  ) {
-    // Real-time update
-    effect(() => {
-      const latest = this.signalR.latestTelemetry();
-      if (latest && this.device && latest.gatewayId === this.device.gatewayIdentify) {
-        this.liveTemp = latest.temperature;
-        this.liveHumi = latest.humidity;
-        this.addChartPoint(latest.temperature ?? 0, latest.humidity ?? 0);
-      }
-    });
-  }
+  ) {}
 
   ngOnInit() {
     this.deviceId = +this.route.snapshot.params['id'];
@@ -361,6 +352,7 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     this.tempChart?.destroy();
     this.humiChart?.destroy();
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
   }
 
   loadDevice() {
@@ -371,7 +363,7 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
       this.api.getDeviceSettings(this.deviceId).subscribe(s => {
         if (s) this.settingsForm = { ...s };
       });
-      // Load live telemetry
+      // Load initial live telemetry
       this.api.getDeviceTelemetry(d.gatewayIdentify).subscribe(t => {
         if (t) { this.liveTemp = t.temperature; this.liveHumi = t.humidity; }
       });
@@ -379,7 +371,23 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
       this.api.getAlarms({ deviceId: this.deviceId, page: 1, pageSize: 1 }).subscribe(r => {
         this.alarmCount = r.totalCount || 0;
       });
+      // Start 1-second Redis polling for real-time chart
+      this.startPolling(d.gatewayIdentify);
     });
+  }
+
+  private startPolling(gatewayId: string) {
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
+    this.pollingInterval = setInterval(() => {
+      this.api.getDeviceTelemetry(gatewayId).subscribe(t => {
+        if (t) {
+          this.liveTemp = t.temperature;
+          this.liveHumi = t.humidity;
+          this.device.status = t.isOnline ? 'Online' : 'Offline';
+          this.addChartPoint(t.temperature ?? 0, t.humidity ?? 0);
+        }
+      });
+    }, 1000); // Poll Redis every 1 second
   }
 
   loadAlarms() {
