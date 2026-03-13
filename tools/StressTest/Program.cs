@@ -32,8 +32,8 @@ var devices = Enumerable.Range(1, deviceCount).Select(i => new
 {
     GatewayId = $"GW-{i:D4}",
     Topic = $"devices/GW-{i:D4}/telemetry",
-    BaseTemp = 20.0 + Random.Shared.NextDouble() * 10, // 20-30°C base
-    BaseHumi = 40.0 + Random.Shared.NextDouble() * 30  // 40-70% base
+    BaseTemp = 20.0 + Random.Shared.NextDouble() * 13, // 20-33°C base
+    BaseHumi = 50.0 + Random.Shared.NextDouble() * 20  // 50-70% base
 }).ToArray();
 
 var factory = new MqttFactory();

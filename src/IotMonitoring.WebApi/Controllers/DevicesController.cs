@@ -31,17 +31,28 @@ public class DevicesController : ControllerBase
             devices = devices.Where(d => d.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
                 || d.GatewayIdentify.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
 
-        if (!string.IsNullOrEmpty(status) && Enum.TryParse<Domain.Enums.DeviceStatus>(status, out var s))
-            devices = devices.Where(d => d.Status == s).ToList();
+        // Get real-time online status from Redis
+        var onlineSet = await _cache.GetOnlineDevicesAsync();
 
-        return Ok(devices.Select(d => MapDeviceDto(d)));
+        // Filter by status using Redis online set
+        if (!string.IsNullOrEmpty(status))
+        {
+            if (status.Equals("Online", StringComparison.OrdinalIgnoreCase))
+                devices = devices.Where(d => onlineSet.Contains(d.GatewayIdentify)).ToList();
+            else if (status.Equals("Offline", StringComparison.OrdinalIgnoreCase))
+                devices = devices.Where(d => !onlineSet.Contains(d.GatewayIdentify)).ToList();
+        }
+
+        return Ok(devices.Select(d => MapDeviceDto(d, onlineSet.Contains(d.GatewayIdentify))));
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
         var device = await _deviceRepo.GetByIdAsync(id);
-        return device == null ? NotFound() : Ok(MapDeviceDto(device));
+        if (device == null) return NotFound();
+        var onlineSet = await _cache.GetOnlineDevicesAsync();
+        return Ok(MapDeviceDto(device, onlineSet.Contains(device.GatewayIdentify)));
     }
 
     [HttpPost]
@@ -137,11 +148,11 @@ public class DevicesController : ControllerBase
         return Ok(setting);
     }
 
-    private static object MapDeviceDto(Device d) => new
+    private static object MapDeviceDto(Device d, bool isOnline = false) => new
     {
         d.Id, d.ProvinceId, d.GatewayIdentify, d.MqttTopic,
         d.Name, d.Description, d.Latitude, d.Longitude,
-        Status = d.Status.ToString(), d.IsActive,
+        Status = isOnline ? "Online" : "Offline", d.IsActive,
         Province = d.Province != null ? new { d.Province.Id, d.Province.Name } : null,
         Setting = d.Setting != null ? new
         {
