@@ -14,6 +14,7 @@ export const routes: Routes = [
       { path: 'devices/:id', loadComponent: () => import('./pages/device-detail/device-detail.component').then(m => m.DeviceDetailComponent) },
       { path: 'alarms', loadComponent: () => import('./pages/alarms/alarms.component').then(m => m.AlarmsComponent) },
       { path: 'reports', loadComponent: () => import('./pages/reports/reports.component').then(m => m.ReportsComponent) },
+      { path: 'users', loadComponent: () => import('./pages/users/users.component').then(m => m.UsersComponent) },
     ]
   },
   { path: '**', redirectTo: '' }

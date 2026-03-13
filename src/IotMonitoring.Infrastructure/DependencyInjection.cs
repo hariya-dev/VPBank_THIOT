@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<IDeviceSettingRepository, DeviceSettingRepository>();
         services.AddScoped<IAlarmLogRepository, AlarmLogRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserDeviceRepository, UserDeviceRepository>();
 
         // ── Services ───────────────────────────────────────
         services.AddSingleton<IBulkInsertService>(sp =>

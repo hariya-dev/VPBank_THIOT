@@ -147,4 +147,33 @@ export class ApiService {
     });
     return this.http.get(`${this.API}/datalogs/alarm-report`, { params: httpParams });
   }
+
+  // ── Users (Admin only) ──
+  getUsers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.API}/users`);
+  }
+
+  getUser(id: string): Observable<any> {
+    return this.http.get(`${this.API}/users/${id}`);
+  }
+
+  createUser(data: any): Observable<any> {
+    return this.http.post(`${this.API}/auth/register`, data);
+  }
+
+  updateUser(id: string, data: any): Observable<any> {
+    return this.http.put(`${this.API}/users/${id}`, data);
+  }
+
+  deleteUser(id: string): Observable<any> {
+    return this.http.delete(`${this.API}/users/${id}`);
+  }
+
+  getUserDevices(userId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.API}/users/${userId}/devices`);
+  }
+
+  setUserDevices(userId: string, deviceIds: number[]): Observable<any> {
+    return this.http.put(`${this.API}/users/${userId}/devices`, { deviceIds });
+  }
 }

@@ -15,12 +15,14 @@ public class AuthController : ControllerBase
     private readonly IUserRepository _userRepo;
     private readonly ITokenService _tokenService;
     private readonly IConfiguration _config;
+    private readonly IUserDeviceRepository _userDeviceRepo;
 
-    public AuthController(IUserRepository userRepo, ITokenService tokenService, IConfiguration config)
+    public AuthController(IUserRepository userRepo, ITokenService tokenService, IConfiguration config, IUserDeviceRepository userDeviceRepo)
     {
         _userRepo = userRepo;
         _tokenService = tokenService;
         _config = config;
+        _userDeviceRepo = userDeviceRepo;
     }
 
     [HttpPost("login")]
@@ -38,11 +40,21 @@ public class AuthController : ControllerBase
             int.Parse(_config["Jwt:RefreshTokenExpiryDays"] ?? "7"));
         await _userRepo.UpdateAsync(user);
 
+        // Get assigned device IDs for Viewer
+        var assignedDeviceIds = user.Role == UserRole.Viewer
+            ? await _userDeviceRepo.GetDeviceIdsForUserAsync(user.Id)
+            : null;
+
         return Ok(new
         {
             accessToken,
             refreshToken,
-            user = new { user.Id, user.Username, user.FullName, user.Email, Role = user.Role.ToString() }
+            user = new
+            {
+                user.Id, user.Username, user.FullName, user.Email,
+                Role = user.Role.ToString(), user.ProvinceId,
+                AssignedDeviceIds = assignedDeviceIds
+            }
         });
     }
 
@@ -83,11 +95,12 @@ public class AuthController : ControllerBase
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             FullName = request.FullName,
             Email = request.Email,
+            ProvinceId = request.ProvinceId,
             Role = Enum.Parse<UserRole>(request.Role ?? "Viewer")
         };
 
         await _userRepo.AddAsync(user);
-        return Ok(new { user.Id, user.Username, user.FullName, Role = user.Role.ToString() });
+        return Ok(new { user.Id, user.Username, user.FullName, Role = user.Role.ToString(), user.ProvinceId });
     }
 
     [Authorize]
@@ -100,10 +113,19 @@ public class AuthController : ControllerBase
         var user = await _userRepo.GetByIdAsync(guid);
         if (user == null) return NotFound();
 
-        return Ok(new { user.Id, user.Username, user.FullName, user.Email, Role = user.Role.ToString() });
+        var assignedDeviceIds = user.Role == UserRole.Viewer
+            ? await _userDeviceRepo.GetDeviceIdsForUserAsync(user.Id)
+            : null;
+
+        return Ok(new
+        {
+            user.Id, user.Username, user.FullName, user.Email,
+            Role = user.Role.ToString(), user.ProvinceId,
+            AssignedDeviceIds = assignedDeviceIds
+        });
     }
 }
 
 public record LoginRequest(string Username, string Password);
 public record RefreshRequest(string AccessToken, string RefreshToken);
-public record RegisterRequest(string Username, string Password, string FullName, string? Email, string? Role);
+public record RegisterRequest(string Username, string Password, string FullName, string? Email, string? Role, int? ProvinceId);

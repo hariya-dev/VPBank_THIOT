@@ -57,6 +57,9 @@ public class DeviceRepository : IDeviceRepository
     public async Task<List<Device>> GetActiveDevicesAsync(CancellationToken ct = default)
         => await _db.Devices.Include(d => d.Setting).Where(d => d.IsActive).ToListAsync(ct);
 
+    public async Task<List<Device>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default)
+        => await _db.Devices.Include(d => d.Setting).Include(d => d.Province).Where(d => ids.Contains(d.Id) && d.IsActive).OrderBy(d => d.Name).ToListAsync(ct);
+
     public async Task<Device> AddAsync(Device device, CancellationToken ct = default)
     {
         _db.Devices.Add(device);
@@ -197,5 +200,43 @@ public class UserRepository : IUserRepository
     {
         var entity = await _db.Users.FindAsync(new object[] { id }, ct);
         if (entity != null) { entity.IsActive = false; await _db.SaveChangesAsync(ct); }
+    }
+}
+
+public class UserDeviceRepository : IUserDeviceRepository
+{
+    private readonly SqlDbContext _db;
+    public UserDeviceRepository(SqlDbContext db) => _db = db;
+
+    public async Task<List<int>> GetDeviceIdsForUserAsync(Guid userId, CancellationToken ct = default)
+        => await _db.UserDevices.Where(ud => ud.UserId == userId).Select(ud => ud.DeviceId).ToListAsync(ct);
+
+    public async Task<List<UserDevice>> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
+        => await _db.UserDevices.Include(ud => ud.Device).ThenInclude(d => d.Province)
+            .Where(ud => ud.UserId == userId).ToListAsync(ct);
+
+    public async Task AssignDevicesAsync(Guid userId, IEnumerable<int> deviceIds, CancellationToken ct = default)
+    {
+        var existing = await _db.UserDevices.Where(ud => ud.UserId == userId).Select(ud => ud.DeviceId).ToListAsync(ct);
+        var toAdd = deviceIds.Except(existing);
+        foreach (var deviceId in toAdd)
+            _db.UserDevices.Add(new UserDevice { UserId = userId, DeviceId = deviceId });
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task RemoveDevicesAsync(Guid userId, IEnumerable<int> deviceIds, CancellationToken ct = default)
+    {
+        var toRemove = await _db.UserDevices.Where(ud => ud.UserId == userId && deviceIds.Contains(ud.DeviceId)).ToListAsync(ct);
+        _db.UserDevices.RemoveRange(toRemove);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task ReplaceDevicesAsync(Guid userId, IEnumerable<int> deviceIds, CancellationToken ct = default)
+    {
+        var existing = await _db.UserDevices.Where(ud => ud.UserId == userId).ToListAsync(ct);
+        _db.UserDevices.RemoveRange(existing);
+        foreach (var deviceId in deviceIds)
+            _db.UserDevices.Add(new UserDevice { UserId = userId, DeviceId = deviceId });
+        await _db.SaveChangesAsync(ct);
     }
 }

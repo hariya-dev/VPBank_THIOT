@@ -10,6 +10,8 @@ export interface AuthUser {
   fullName: string;
   email?: string;
   role: string;
+  provinceId?: number;
+  assignedDeviceIds?: number[];
 }
 
 export interface LoginResponse {
@@ -80,6 +82,21 @@ export class AuthService {
     return userRole ? roles.includes(userRole) : false;
   }
 
+  isAdmin(): boolean {
+    return this.hasRole('Admin');
+  }
+
+  isViewer(): boolean {
+    return this.hasRole('Viewer');
+  }
+
+  canAccessDevice(deviceId: number): boolean {
+    const user = this.currentUser();
+    if (!user) return false;
+    if (user.role === 'Admin' || user.role === 'Operator') return true;
+    return user.assignedDeviceIds?.includes(deviceId) ?? false;
+  }
+
   private loadFromStorage() {
     const token = localStorage.getItem('accessToken');
     const userStr = localStorage.getItem('user');
@@ -91,3 +108,4 @@ export class AuthService {
     }
   }
 }
+

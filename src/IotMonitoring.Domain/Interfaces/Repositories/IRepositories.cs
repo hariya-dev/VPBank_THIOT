@@ -17,6 +17,7 @@ public interface IDeviceRepository
     Task<Device?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<Device?> GetByGatewayIdAsync(string gatewayId, CancellationToken ct = default);
     Task<List<Device>> GetActiveDevicesAsync(CancellationToken ct = default);
+    Task<List<Device>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default);
     Task<Device> AddAsync(Device device, CancellationToken ct = default);
     Task UpdateAsync(Device device, CancellationToken ct = default);
     Task DeleteAsync(int id, CancellationToken ct = default);
@@ -53,4 +54,13 @@ public interface IUserRepository
     Task<User> AddAsync(User user, CancellationToken ct = default);
     Task UpdateAsync(User user, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
+}
+
+public interface IUserDeviceRepository
+{
+    Task<List<int>> GetDeviceIdsForUserAsync(Guid userId, CancellationToken ct = default);
+    Task<List<UserDevice>> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
+    Task AssignDevicesAsync(Guid userId, IEnumerable<int> deviceIds, CancellationToken ct = default);
+    Task RemoveDevicesAsync(Guid userId, IEnumerable<int> deviceIds, CancellationToken ct = default);
+    Task ReplaceDevicesAsync(Guid userId, IEnumerable<int> deviceIds, CancellationToken ct = default);
 }
