@@ -130,7 +130,7 @@ public class TelemetryProcessorWorker : BackgroundService
                 raw.Temperature.Value, tempL, hysteresis,
                 raw.Temperature.Value <= tempL,
                 raw.Temperature.Value >= (tempL + hysteresis),
-                AlarmType.TempLow, AlarmSeverity.Warning, ct);
+                AlarmType.TempLow, AlarmSeverity.Critical, ct);
         }
 
         // Check Humidity High
@@ -140,14 +140,14 @@ public class TelemetryProcessorWorker : BackgroundService
                 raw.Humidity.Value, humiH, hysteresis,
                 raw.Humidity.Value >= humiH,
                 raw.Humidity.Value <= (humiH - hysteresis),
-                AlarmType.HumiHigh, AlarmSeverity.Warning, ct);
+                AlarmType.HumiHigh, AlarmSeverity.Critical, ct);
 
             // Check Humidity Low
             await EvaluateAlarmAsync(raw, deviceId, "HumiLow",
                 raw.Humidity.Value, humiL, hysteresis,
                 raw.Humidity.Value <= humiL,
                 raw.Humidity.Value >= (humiL + hysteresis),
-                AlarmType.HumiLow, AlarmSeverity.Warning, ct);
+                AlarmType.HumiLow, AlarmSeverity.Critical, ct);
         }
     }
 

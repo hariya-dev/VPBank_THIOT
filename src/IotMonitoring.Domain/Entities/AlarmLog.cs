@@ -8,7 +8,7 @@ public class AlarmLog
     public long Id { get; set; }
     public int DeviceId { get; set; }
     public AlarmType AlarmType { get; set; }
-    public AlarmSeverity Severity { get; set; } = AlarmSeverity.Warning;
+    public AlarmSeverity Severity { get; set; } = AlarmSeverity.Critical;
     public string Message { get; set; } = string.Empty;
     public double? Value { get; set; }
     public double? Threshold { get; set; }

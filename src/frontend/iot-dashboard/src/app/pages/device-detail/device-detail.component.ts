@@ -219,7 +219,6 @@ declare var Chart: any;
                 <tr>
                   <th class="table-header">Thời gian</th>
                   <th class="table-header">Loại</th>
-                  <th class="table-header">Mức độ</th>
                   <th class="table-header">Giá trị</th>
                   <th class="table-header">Trạng thái</th>
                   <th class="table-header"></th>
@@ -230,9 +229,6 @@ declare var Chart: any;
                   <tr class="table-row" [style.background]="!a.isAcknowledged ? 'rgba(227,27,35,0.12)' : ''" [style.border-left]="!a.isAcknowledged ? '3px solid #E31B23' : ''">
                     <td class="table-cell text-xs tabular-nums">{{ a.createdAt | date:'dd/MM HH:mm:ss' }}</td>
                     <td class="table-cell"><span class="badge-info text-[10px]">{{ getAlarmTypeLabel(a.alarmType) }}</span></td>
-                    <td class="table-cell">
-                      <span [class]="a.severity === 'Critical' || a.severity === 2 ? 'badge-critical' : a.severity === 'Warning' || a.severity === 1 ? 'badge-warning' : 'badge-info'">{{ getSeverityLabel(a.severity) }}</span>
-                    </td>
                     <td class="table-cell font-mono text-sm tabular-nums">{{ a.value | number:'1.1-1' }}</td>
                     <td class="table-cell">
                       @if (a.isResolved) {
