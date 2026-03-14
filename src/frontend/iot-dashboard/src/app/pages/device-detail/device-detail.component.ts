@@ -114,7 +114,7 @@ declare var Chart: any;
         @if (queryResults.length > 0) {
           <!-- Toggle: Table / Chart -->
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs text-dashboard-muted">{{ queryResults.length }} bản ghi</span>
+            <span class="text-xs text-dashboard-muted">{{ queryResults.length }} bản ghi · Trang {{ queryPage }}/{{ queryTotalPages }}</span>
             <div class="flex gap-1 bg-navy-700 rounded-lg p-0.5">
               <button (click)="queryView = 'table'" class="tab-btn text-xs !px-3 !py-1" [class.active]="queryView === 'table'">
                 <svg class="w-3.5 h-3.5 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -129,24 +129,32 @@ declare var Chart: any;
 
           <!-- Table View -->
           @if (queryView === 'table') {
-            <div class="overflow-x-auto max-h-80 rounded-lg border border-dashboard-border/30">
+            <div class="overflow-x-auto rounded-lg border border-dashboard-border/30">
               <table class="w-full">
-                <thead class="bg-navy-700/50 sticky top-0 z-10">
+                <thead class="bg-navy-700/50">
                   <tr>
-                    <th class="table-header">#</th>
+                    <th class="table-header cursor-pointer select-none" (click)="sortQuery('createdAt')">
+                      Thời gian
+                      <span class="ml-1 text-[10px]">{{ sortField === 'createdAt' ? (sortDir === 'asc' ? '▲' : '▼') : '⇅' }}</span>
+                    </th>
                     @if (queryType !== 'humidity') {
-                      <th class="table-header">🌡️ Nhiệt độ (°C)</th>
+                      <th class="table-header cursor-pointer select-none" (click)="sortQuery('temperature')">
+                        🌡️ Nhiệt độ (°C)
+                        <span class="ml-1 text-[10px]">{{ sortField === 'temperature' ? (sortDir === 'asc' ? '▲' : '▼') : '⇅' }}</span>
+                      </th>
                     }
                     @if (queryType !== 'temperature') {
-                      <th class="table-header">💧 Độ ẩm (%)</th>
+                      <th class="table-header cursor-pointer select-none" (click)="sortQuery('humidity')">
+                        💧 Độ ẩm (%)
+                        <span class="ml-1 text-[10px]">{{ sortField === 'humidity' ? (sortDir === 'asc' ? '▲' : '▼') : '⇅' }}</span>
+                      </th>
                     }
-                    <th class="table-header">Thời gian</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (row of queryResults; track $index) {
+                  @for (row of pagedResults; track $index) {
                     <tr class="table-row">
-                      <td class="table-cell text-dashboard-muted text-xs">{{ $index + 1 }}</td>
+                      <td class="table-cell text-xs text-dashboard-muted tabular-nums">{{ row.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
                       @if (queryType !== 'humidity') {
                         <td class="table-cell font-semibold tabular-nums" [class.text-accent-400]="row.temperature > 35" [class.text-sky-400]="row.temperature < 10">
                           {{ row.temperature !== null ? (row.temperature | number:'1.1-1') : '--' }}
@@ -157,12 +165,21 @@ declare var Chart: any;
                           {{ row.humidity !== null ? (row.humidity | number:'1.1-1') : '--' }}
                         </td>
                       }
-                      <td class="table-cell text-xs text-dashboard-muted">{{ row.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
                     </tr>
                   }
                 </tbody>
               </table>
             </div>
+            <!-- Pagination -->
+            @if (queryTotalPages > 1) {
+              <div class="flex items-center justify-center gap-2 mt-3">
+                <button (click)="queryPage = 1; updatePagedResults()" [disabled]="queryPage === 1" class="btn-ghost text-xs px-2 py-1">«</button>
+                <button (click)="queryPage = queryPage - 1; updatePagedResults()" [disabled]="queryPage === 1" class="btn-ghost text-xs px-2 py-1">‹</button>
+                <span class="text-xs text-dashboard-muted">{{ queryPage }} / {{ queryTotalPages }}</span>
+                <button (click)="queryPage = queryPage + 1; updatePagedResults()" [disabled]="queryPage === queryTotalPages" class="btn-ghost text-xs px-2 py-1">›</button>
+                <button (click)="queryPage = queryTotalPages; updatePagedResults()" [disabled]="queryPage === queryTotalPages" class="btn-ghost text-xs px-2 py-1">»</button>
+              </div>
+            }
           }
 
           <!-- Chart View -->
@@ -177,6 +194,69 @@ declare var Chart: any;
           <div class="text-center py-8">
             <svg class="w-10 h-10 text-dashboard-muted/30 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <p class="text-sm text-dashboard-muted">Không có dữ liệu trong khoảng thời gian này</p>
+          </div>
+        }
+      </div>
+
+      <!-- ═══ ALARM VIEWER ═══ -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm uppercase tracking-wider text-dashboard-muted flex items-center gap-2">
+            <svg class="w-4 h-4 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            Cảnh báo thiết bị
+            @if (deviceAlarms.length > 0) {
+              <span class="bg-accent-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{{ deviceAlarms.length }}</span>
+            }
+          </h3>
+          <button (click)="loadDeviceAlarms()" class="btn-ghost text-xs">↻ Làm mới</button>
+        </div>
+        @if (deviceAlarms.length === 0) {
+          <p class="text-sm text-dashboard-muted text-center py-4">✓ Không có cảnh báo</p>
+        } @else {
+          <div class="overflow-x-auto rounded-lg border border-dashboard-border/30">
+            <table class="w-full">
+              <thead class="bg-navy-700/50">
+                <tr>
+                  <th class="table-header">Thời gian</th>
+                  <th class="table-header">Loại</th>
+                  <th class="table-header">Mức độ</th>
+                  <th class="table-header">Giá trị</th>
+                  <th class="table-header">Trạng thái</th>
+                  <th class="table-header"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of deviceAlarms; track a.id) {
+                  <tr class="table-row" [style.background]="!a.isAcknowledged ? 'rgba(227,27,35,0.12)' : ''" [style.border-left]="!a.isAcknowledged ? '3px solid #E31B23' : ''">
+                    <td class="table-cell text-xs tabular-nums">{{ a.createdAt | date:'dd/MM HH:mm:ss' }}</td>
+                    <td class="table-cell"><span class="badge-info text-[10px]">{{ getAlarmTypeLabel(a.alarmType) }}</span></td>
+                    <td class="table-cell">
+                      <span [class]="a.severity === 'Critical' || a.severity === 2 ? 'badge-critical' : a.severity === 'Warning' || a.severity === 1 ? 'badge-warning' : 'badge-info'">{{ getSeverityLabel(a.severity) }}</span>
+                    </td>
+                    <td class="table-cell font-mono text-sm tabular-nums">{{ a.value | number:'1.1-1' }}</td>
+                    <td class="table-cell">
+                      @if (a.isResolved) {
+                        <span class="badge-online text-[10px]">Resolved</span>
+                      } @else if (a.isAcknowledged) {
+                        <span class="badge-warning text-[10px]">ACK</span>
+                      } @else {
+                        <span class="badge-critical text-[10px] animate-pulse">Chưa ACK</span>
+                      }
+                    </td>
+                    <td class="table-cell">
+                      @if (!a.isResolved && auth.hasAnyRole('Admin', 'Operator')) {
+                        <div class="flex gap-1">
+                          @if (!a.isAcknowledged) {
+                            <button (click)="ackAlarm(a.id)" class="btn-secondary text-[10px] px-2 py-0.5">ACK</button>
+                          }
+                          <button (click)="resolveAlarmItem(a.id)" class="btn-ghost text-[10px] px-2 py-0.5">Resolve</button>
+                        </div>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         }
       </div>
@@ -413,9 +493,18 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   exportTo = '';
   queryType: 'all' | 'temperature' | 'humidity' = 'all';
   queryResults: any[] = [];
+  pagedResults: any[] = [];
   queryView: 'table' | 'chart' = 'table';
   queryLoading = false;
   querySearched = false;
+  queryPage = 1;
+  queryPageSize = 20;
+  queryTotalPages = 1;
+  sortField: 'createdAt' | 'temperature' | 'humidity' = 'createdAt';
+  sortDir: 'asc' | 'desc' = 'desc';
+
+  // Alarm viewer
+  deviceAlarms: any[] = [];
 
   private tempChart: any;
   private humiChart: any;
@@ -437,6 +526,7 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit() {
     this.deviceId = +this.route.snapshot.params['id'];
     this.loadDevice();
+    this.loadDeviceAlarms();
     this.api.getProvinces().subscribe(p => this.provinces = p);
 
     const now = new Date();
@@ -493,12 +583,76 @@ export class DeviceDetailComponent implements OnInit, OnDestroy, AfterViewInit {
           }));
           this.queryLoading = false;
           this.queryView = 'table';
+          this.queryPage = 1;
+          this.sortField = 'createdAt';
+          this.sortDir = 'desc';
+          this.updatePagedResults();
         },
         error: () => {
           this.queryResults = [];
+          this.pagedResults = [];
           this.queryLoading = false;
         }
       });
+  }
+
+  sortQuery(field: 'createdAt' | 'temperature' | 'humidity') {
+    if (this.sortField === field) {
+      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortField = field;
+      this.sortDir = field === 'createdAt' ? 'desc' : 'desc';
+    }
+    this.queryPage = 1;
+    this.updatePagedResults();
+  }
+
+  updatePagedResults() {
+    const sorted = [...this.queryResults].sort((a, b) => {
+      let vA = a[this.sortField];
+      let vB = b[this.sortField];
+      if (this.sortField === 'createdAt') {
+        vA = new Date(vA).getTime();
+        vB = new Date(vB).getTime();
+      }
+      if (vA == null) return 1;
+      if (vB == null) return -1;
+      const cmp = vA < vB ? -1 : vA > vB ? 1 : 0;
+      return this.sortDir === 'asc' ? cmp : -cmp;
+    });
+    this.queryTotalPages = Math.max(1, Math.ceil(sorted.length / this.queryPageSize));
+    if (this.queryPage > this.queryTotalPages) this.queryPage = this.queryTotalPages;
+    const start = (this.queryPage - 1) * this.queryPageSize;
+    this.pagedResults = sorted.slice(start, start + this.queryPageSize);
+  }
+
+  // ── Alarm Viewer ──
+  loadDeviceAlarms() {
+    this.api.getAlarms({ deviceId: this.deviceId, page: 1, pageSize: 50 }).subscribe(r => {
+      this.deviceAlarms = r.items || [];
+      this.alarmCount = this.deviceAlarms.filter((a: any) => !a.isResolved).length;
+    });
+  }
+
+  ackAlarm(id: number) {
+    this.api.acknowledgeAlarm(id).subscribe(() => this.loadDeviceAlarms());
+  }
+
+  resolveAlarmItem(id: number) {
+    this.api.resolveAlarm(id).subscribe(() => this.loadDeviceAlarms());
+  }
+
+  getAlarmTypeLabel(t: any): string {
+    const map: Record<number, string> = { 0: 'Nhiệt cao', 1: 'Nhiệt thấp', 2: 'Ẩm cao', 3: 'Ẩm thấp', 4: 'Mất kết nối', 5: 'Khôi phục' };
+    const strMap: Record<string, string> = { TempHigh: 'Nhiệt cao', TempLow: 'Nhiệt thấp', HumiHigh: 'Ẩm cao', HumiLow: 'Ẩm thấp', Offline: 'Mất kết nối', Restored: 'Khôi phục' };
+    if (typeof t === 'number') return map[t] ?? `Type ${t}`;
+    return strMap[t] ?? t;
+  }
+
+  getSeverityLabel(s: any): string {
+    const map: Record<number, string> = { 0: 'Info', 1: 'Warning', 2: 'Critical' };
+    if (typeof s === 'number') return map[s] ?? `Sev ${s}`;
+    return s;
   }
 
   initQueryChart() {
